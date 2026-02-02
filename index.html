@@ -146,18 +146,26 @@
                 lastUpdate: new Date().toISOString()
             };
 
+            console.log('🔍 DEBUG - Sauvegarde pour:', state.studentId);
+            console.log('🔍 DEBUG - Firebase ready:', isFirebaseReady);
+
             if (isFirebaseReady) {
+                console.log('🔍 DEBUG - Envoi vers Firebase...');
                 db.ref('students/' + state.studentId).set(dataToSave)
                     .then(() => {
+                        console.log('✅ DEBUG - Firebase OK !');
                         alert('✅ Enregistré sur le serveur');
                         saveDataToLocal();
                     })
                     .catch((error) => {
-                        console.error("Erreur sauvegarde:", error);
-                        alert('⚠️ Erreur serveur. Sauvegarde locale effectuée.');
+                        console.error("❌ DEBUG - Erreur Firebase:", error);
+                        console.error("❌ Code:", error.code);
+                        console.error("❌ Message:", error.message);
+                        alert('⚠️ Erreur: ' + error.message);
                         saveDataToLocal();
                     });
             } else {
+                console.log('⚠️ DEBUG - Firebase offline');
                 saveDataToLocal();
                 alert('✅ Enregistré localement (mode hors ligne)');
             }
