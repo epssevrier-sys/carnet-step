@@ -1,0 +1,20 @@
+{
+  "name": "carnet-step",
+  "version": "1.0.0",
+  "description": "Carnet de suivi Step pour élèves de BAC PRO",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "step",
+    "carnet",
+    "education",
+    "bac-pro"
+  ],
+  "author": "Professeur",
+  "license": "MIT"
+}

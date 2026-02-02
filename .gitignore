@@ -1,0 +1,24 @@
+# Dépendances Node
+node_modules/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration locale
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Fichiers temporaires
+*.tmp
+*.temp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Carnet de Suivi Step - BAC PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* Amélioration pour mobile */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Boutons tactiles plus grands sur mobile */
+        @media (max-width: 768px) {
+            button, select, input {
+                min-height: 44px;
+                font-size: 16px; /* Évite le zoom sur iOS */
+            }
+            
+            .emoji-btn {
+                font-size: 1.5rem;
+                padding: 0.75rem;
+            }
+            
+            .grid-mobile-1 {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid-mobile-2 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Scroll smooth */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Support des anciens navigateurs */
+        .flex {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+        }
+        
+        .grid {
+            display: -ms-grid;
+            display: grid;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-blue-200 min-h-screen p-2 sm:p-4">
+    <div id="app"></div>
+
+    <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMIBURdvMogIeHP4u36I18NaSwOPLcQQQ",
+            authDomain: "carnet-entrainement-step.firebaseapp.com",
+            databaseURL: "https://carnet-entrainement-step-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "carnet-entrainement-step",
+            storageBucket: "carnet-entrainement-step.firebasestorage.app",
+            messagingSenderId: "545085492516",
+            appId: "1:545085492516:web:f5bfede04fc7442514b7b1"
+        };
+
+        // Initialisation Firebase
+        let db;
+        let isFirebaseReady = false;
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseReady = true;
+            console.log("✅ Firebase initialisé avec succès");
+        } catch (error) {
+            console.error("❌ Erreur Firebase:", error);
+            isFirebaseReady = false;
+        }
+
+        let state = {
+            currentPage: 0,
+            viewMode: 'student',
+            studentId: '',
+            selectedClasse: '',
+            allStudents: [],
+            isTeacherAuthenticated: false,
+            profileData: { nom: '', prenom: '', classe: '', age: '', sexe: 'garcon', fcRepos: '', theme: 'theme1' },
+            sessions: Array(8).fill(null).map((_, i) => ({
+                id: i + 1, date: '', 
+                series: [
+                    { num: 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 2, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 3, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
+                ],
+                                    fcApres: '', souffle: '', transpiration: '', sensations: '', bilan: '',
+                    fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: '',
+                fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: ''
+            }))
+        };
+
+        // MOT DE PASSE PROFESSEUR - À MODIFIER !
+        const TEACHER_PASSWORD = "prof2025";
+
+        // Fonction pour charger les données depuis Firebase
+        function loadDataFromFirebase() {
+            if (!isFirebaseReady || !state.studentId) return;
+            
+            db.ref('students/' + state.studentId).once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.profile) state.profileData = data.profile;
+                    if (data.sessions) state.sessions = data.sessions;
+                    render();
+                }
+            }).catch((error) => {
+                console.error("Erreur de chargement:", error);
+                loadDataFromLocal();
+                render();
+            });
+        }
+
+        // Fonction de sauvegarde vers Firebase
+        function saveDataToFirebase() {
+            if (!state.studentId) { 
+                alert('⚠️ Entrez votre identifiant'); 
+                return; 
+            }
+
+            const dataToSave = {
+                profile: state.profileData,
+                sessions: state.sessions,
+                lastUpdate: new Date().toISOString()
+            };
+
+            if (isFirebaseReady) {
+                db.ref('students/' + state.studentId).set(dataToSave)
+                    .then(() => {
+                        alert('✅ Enregistré sur le serveur');
+                        saveDataToLocal();
+                    })
+                    .catch((error) => {
+                        console.error("Erreur sauvegarde:", error);
+                        alert('⚠️ Erreur serveur. Sauvegarde locale effectuée.');
+                        saveDataToLocal();
+                    });
+            } else {
+                saveDataToLocal();
+                alert('✅ Enregistré localement (mode hors ligne)');
+            }
+        }
+
+        // Fonctions de stockage local (backup)
+        function saveDataToLocal() {
+            localStorage.setItem(`step-profile-${state.studentId}`, JSON.stringify(state.profileData));
+            localStorage.setItem(`step-sessions-${state.studentId}`, JSON.stringify(state.sessions));
+        }
+
+        function loadDataFromLocal() {
+            const profile = localStorage.getItem(`step-profile-${state.studentId}`);
+            const sessions = localStorage.getItem(`step-sessions-${state.studentId}`);
+            if (profile) state.profileData = JSON.parse(profile);
+            if (sessions) state.sessions = JSON.parse(sessions);
+        }
+
+        function loadData() {
+            if (state.viewMode === 'student' && state.studentId) {
+                if (isFirebaseReady) {
+                    loadDataFromFirebase();
+                } else {
+                    loadDataFromLocal();
+                    render();
+                }
+            }
+        }
+
+        function saveData() {
+            saveDataToFirebase();
+            // Passer automatiquement à la séance suivante si on n'est pas à la dernière
+            if (state.currentPage > 0 && state.currentPage < 8) {
+                setTimeout(() => {
+                    state.currentPage++;
+                    render();
+                }, 500); // Petit délai pour voir le message de confirmation
+            }
+        }
+
+        function resetData() {
+            if (confirm('Réinitialiser toutes les données ?')) {
+                if (isFirebaseReady) {
+                    db.ref('students/' + state.studentId).remove()
+                        .then(() => {
+                            localStorage.removeItem(`step-profile-${state.studentId}`);
+                            localStorage.removeItem(`step-sessions-${state.studentId}`);
+                            resetStateData();
+                            alert('✅ Données supprimées');
+                        })
+                        .catch((error) => {
+                            console.error("Erreur suppression:", error);
+                        });
+                } else {
+                    localStorage.removeItem(`step-profile-${state.studentId}`);
+                    localStorage.removeItem(`step-sessions-${state.studentId}`);
+                    resetStateData();
+                    alert('✅ Données supprimées localement');
+                }
+            }
+        }
+
+        function resetStateData() {
+            state.profileData = { nom: '', prenom: '', classe: '', age: '', sexe: 'garcon', fcRepos: '', theme: 'theme1' };
+            state.sessions = Array(8).fill(null).map((_, i) => ({
+                id: i + 1, date: '',
+                series: [
+                    { num: 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 2, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 3, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
+                ],
+                fcApres: '', souffle: '', transpiration: '', sensations: '', bilan: '',
+                fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: ''
+            }));
+            render();
+        }
+
+        function getStudentsListFromFirebase(callback) {
+            if (!isFirebaseReady) {
+                callback(getStudentsListFromLocal());
+                return;
+            }
+
+            db.ref('students').once('value').then((snapshot) => {
+                const studentsData = [];
+                snapshot.forEach((childSnapshot) => {
+                    const id = childSnapshot.key;
+                    const data = childSnapshot.val();
+                    if (data.profile) {
+                        studentsData.push({
+                            id: id,
+                            nom: data.profile.nom,
+                            prenom: data.profile.prenom,
+                            classe: data.profile.classe,
+                            lastUpdate: data.lastUpdate
+                        });
+                    }
+                });
+                callback(studentsData);
+            }).catch((error) => {
+                console.error("Erreur chargement liste:", error);
+                callback(getStudentsListFromLocal());
+            });
+        }
+
+        function getStudentsListFromLocal() {
+            const list = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('step-profile-')) {
+                    const id = key.replace('step-profile-', '');
+                    const profile = JSON.parse(localStorage.getItem(key));
+                    list.push({ id, ...profile });
+                }
+            }
+            return list;
+        }
+
+        function calcFCMax() {
+            if (!state.profileData.age) return '-';
+            const age = parseInt(state.profileData.age);
+            return state.profileData.sexe === 'garcon' ? 220 - age : 226 - age;
+        }
+
+        function calcFCReserve() {
+            const fcMax = calcFCMax();
+            const fcRepos = parseInt(state.profileData.fcRepos) || 0;
+            return fcMax === '-' ? '-' : fcMax - fcRepos;
+        }
+
+        function calcFCE() {
+            const fcReserve = calcFCReserve();
+            const fcRepos = parseInt(state.profileData.fcRepos) || 0;
+            if (fcReserve === '-') return '-';
+            const pct = state.profileData.theme === 'theme1' ? 0.85 : 0.70;
+            return Math.round(fcRepos + (fcReserve * pct));
+        }
+
+        function calcFCEMax() {
+            const fcReserve = calcFCReserve();
+            const fcRepos = parseInt(state.profileData.fcRepos) || 0;
+            if (fcReserve === '-') return '-';
+            if (state.profileData.theme === 'theme1') return '-';
+            return Math.round(fcRepos + (fcReserve * 0.85));
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            const isTeacher = state.viewMode === 'teacher';
+            const disabled = isTeacher ? 'disabled' : '';
+            const disClass = isTeacher ? 'bg-gray-100' : '';
+
+            let html = `
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-lg mb-3 sm:mb-4">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
+                            <button onclick="switchMode('student')" class="w-full sm:w-auto px-4 sm:px-6 py-3 rounded-lg font-semibold text-sm sm:text-base ${state.viewMode === 'student' ? 'bg-blue-600 text-white' : 'bg-gray-200'}">
+                                👁️ Mode Élève
+                            </button>
+                            <button onclick="attemptTeacherMode()" class="w-full sm:w-auto px-4 sm:px-6 py-3 rounded-lg font-semibold text-sm sm:text-base ${state.viewMode === 'teacher' ? 'bg-green-600 text-white' : 'bg-gray-200'}">
+                                👥 Mode Professeur ${state.isTeacherAuthenticated ? '🔓' : '🔒'}
+                            </button>
+                            ${isFirebaseReady ? '<span class="text-xs text-green-600">🟢 En ligne</span>' : '<span class="text-xs text-orange-600">🟠 Hors ligne</span>'}
+                        </div>
+                    </div>
+            `;
+
+            if (state.viewMode === 'student' && !state.studentId) {
+                html += `
+                    <div class="bg-white p-4 rounded-lg shadow-lg">
+                        <label class="block text-sm font-semibold mb-2">Identifiant élève (ex: dupont_marie)</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="idInput" class="flex-1 border-2 border-gray-300 rounded px-3 py-3 text-base" placeholder="ex: dupont_marie">
+                            <button onclick="loadOrCreateStudent()" class="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold whitespace-nowrap">Créer / Charger</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            ${isFirebaseReady ? '☁️ Vos données seront synchronisées en ligne' : '💾 Mode hors ligne - stockage local uniquement'}
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">💡 Si l'identifiant n'existe pas, un nouveau carnet sera créé</p>
+                    </div>
+                `;
+            } else if (state.viewMode === 'teacher' && !state.studentId) {
+                html += `<div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <h2 class="text-xl sm:text-2xl font-bold text-green-900">Liste des élèves</h2>
+                        <button onclick="logoutTeacher()" class="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm">
+                            🚪 Déconnexion
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 flex flex-col sm:flex-row gap-2">
+                        <select id="classeFilter" onchange="filterByClasse()" class="flex-1 border-2 border-gray-300 rounded px-3 py-3 text-base">
+                            <option value="">Toutes les classes</option>
+                        </select>
+                        <button onclick="refreshStudentsList()" class="px-4 py-3 bg-green-500 text-white rounded hover:bg-green-600 text-sm whitespace-nowrap">
+                            🔄 Actualiser
+                        </button>
+                        <button onclick="deleteAllStudents()" class="px-4 py-3 bg-red-600 text-white rounded hover:bg-red-700 text-sm whitespace-nowrap">
+                            🗑️ Tout supprimer
+                        </button>
+                    </div>
+                    
+                    <div id="studentsList">
+                        <p class="text-center text-gray-500">Chargement...</p>
+                    </div>
+                </div>`;
+            } else if (state.studentId) {
+                if (state.currentPage === 0) {
+                    html += renderProfilePage(isTeacher, disabled, disClass);
+                } else {
+                    html += renderSessionPage(state.sessions[state.currentPage - 1], isTeacher, disabled, disClass);
+                }
+
+                html += `
+                    <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-0 bg-white p-3 sm:p-4 rounded-lg shadow-lg">
+                        <button onclick="prevPage()" ${state.currentPage === 0 ? 'disabled' : ''} class="px-4 py-3 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm sm:text-base order-1">← Précédent</button>
+                        <div class="flex flex-col sm:flex-row gap-2 order-3 sm:order-2">
+                            <span class="px-4 py-2 bg-blue-100 rounded font-semibold text-center text-sm sm:text-base">${state.currentPage === 0 ? 'Profil' : `Séance ${state.currentPage}/8`}</span>
+                            ${!isTeacher ? `
+                                <button onclick="saveData()" class="px-4 py-3 bg-green-500 text-white rounded text-sm sm:text-base">💾 Enregistrer</button>
+                                <button onclick="resetData()" class="px-4 py-3 bg-red-500 text-white rounded text-sm sm:text-base">🔄 Reset</button>
+                            ` : `
+                                <button onclick="backToTeacherList()" class="px-4 py-3 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm sm:text-base">← Retour liste</button>
+                            `}
+                        </div>
+                        <button onclick="nextPage()" ${state.currentPage === 8 ? 'disabled' : ''} class="px-4 py-3 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm sm:text-base order-2 sm:order-3">Suivant →</button>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            app.innerHTML = html;
+
+            if (state.viewMode === 'teacher' && !state.studentId) {
+                loadStudentsList();
+            }
+        }
+
+        function renderProfilePage(isTeacher, disabled, disClass) {
+            return `
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg mb-3 sm:mb-4">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6 text-blue-900">CARNET DE SUIVI - STEP BAC PRO</h1>
+                    ${isTeacher ? `<div class="bg-green-100 border-2 border-green-500 rounded p-3 mb-4">
+                        <p class="text-xs sm:text-sm font-semibold text-green-800">📋 Consultation professeur - ${state.studentId}</p>
+                    </div>` : ''}
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <div><label class="block text-sm font-semibold mb-1">Nom</label>
+                            <input type="text" onchange="updateProfile('nom', this.value)" value="${state.profileData.nom}" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}"></div>
+                        <div><label class="block text-sm font-semibold mb-1">Prénom</label>
+                            <input type="text" onchange="updateProfile('prenom', this.value)" value="${state.profileData.prenom}" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}"></div>
+                        <div><label class="block text-sm font-semibold mb-1">Classe</label>
+                            <input type="text" onchange="updateProfile('classe', this.value)" value="${state.profileData.classe}" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <div><label class="block text-sm font-semibold mb-1">Âge</label>
+                            <input type="number" onchange="updateProfile('age', this.value); render();" value="${state.profileData.age}" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}"></div>
+                        <div><label class="block text-sm font-semibold mb-1">Sexe</label>
+                            <select onchange="updateProfile('sexe', this.value); render();" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}">
+                                <option value="garcon" ${state.profileData.sexe === 'garcon' ? 'selected' : ''}>Garçon</option>
+                                <option value="fille" ${state.profileData.sexe === 'fille' ? 'selected' : ''}>Fille</option>
+                            </select></div>
+                        <div><label class="block text-sm font-semibold mb-1">FC Repos (bpm)</label>
+                            <input type="number" onchange="updateProfile('fcRepos', this.value); render();" value="${state.profileData.fcRepos}" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}"></div>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                        <h3 class="font-bold text-base sm:text-lg mb-3">Calculs automatiques</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-white p-3 rounded"><div class="text-sm text-gray-600">FC Maximale</div><div class="text-xl sm:text-2xl font-bold text-blue-600">${calcFCMax()}</div></div>
+                            <div class="bg-white p-3 rounded"><div class="text-sm text-gray-600">FC Réserve</div><div class="text-xl sm:text-2xl font-bold text-blue-600">${calcFCReserve()}</div></div>
+                            <div class="bg-white p-3 rounded">
+                                <div class="text-sm text-gray-600">FCE visée</div>
+                                <div class="text-xl sm:text-2xl font-bold text-green-600">
+                                    ${state.profileData.theme === 'theme2' ? `${calcFCE()} - ${calcFCEMax()}` : calcFCE()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold mb-2">Thème retenu</label>
+                        <select onchange="updateProfile('theme', this.value); render();" ${disabled} class="w-full border-2 rounded px-3 py-3 text-base ${disClass}">
+                            <option value="theme1" ${state.profileData.theme === 'theme1' ? 'selected' : ''}>Thème 1 - Effort bref et intense (≥85% FCR)</option>
+                            <option value="theme2" ${state.profileData.theme === 'theme2' ? 'selected' : ''}>Thème 2 - Effort long et soutenu (70-85% FCR)</option>
+                        </select>
+                    </div>
+
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="font-bold mb-2 text-sm sm:text-base">Formules de référence</h4>
+                        <ul class="text-xs sm:text-sm space-y-1">
+                            <li><strong>FCMax:</strong> Filles = 226 - âge | Garçons = 220 - âge</li>
+                            <li><strong>FC Réserve:</strong> FCMax - FC Repos</li>
+                            <li><strong>FCE (Karvonen):</strong> FC Repos + (FC Réserve × % intensité)</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSessionPage(s, isTeacher, disabled, disClass) {
+            const isTheme1 = state.profileData.theme === 'theme1';
+            return `
+                <div class="bg-white p-6 rounded-lg shadow-lg mb-4">
+                    <h2 class="text-2xl font-bold text-center mb-4 text-blue-900">SÉANCE #${s.id}</h2>
+                    ${isTeacher ? `<div class="bg-green-100 border-2 border-green-500 rounded p-3 mb-4">
+                        <p class="text-sm font-semibold text-green-800">📋 Consultation professeur - ${state.studentId}</p>
+                    </div>` : ''}
+                    
+                    <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
+                        <h3 class="font-bold text-purple-900 mb-2">⏱️ Séquences de travail - ${isTheme1 ? 'Thème 1' : 'Thème 2'}</h3>
+                        ${isTheme1 ? `
+                            <div class="text-sm space-y-1">
+                                <p class="font-semibold">📌 2 séries de 4×4 minutes</p>
+                                <p>• <strong>Série 1:</strong> 4×4 min (repos 2 min entre chaque répétition)</p>
+                                <p>• <strong>Repos entre séries:</strong> 4 minutes</p>
+                                <p>• <strong>Série 2:</strong> 4×4 min (repos 2 min entre chaque répétition)</p>
+                                <p class="text-purple-700 mt-2">💓 FC minimale de reprise: 110 bpm</p>
+                            </div>
+                        ` : `
+                            <div class="text-sm space-y-1">
+                                <p class="font-semibold">📌 4×10 minutes</p>
+                                <p>• 4 séries de 10 minutes (repos 4 min entre chaque série)</p>
+                                <p class="text-purple-700 mt-2">💓 FC minimale de reprise: 110 bpm</p>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold mb-1">Date de la séance</label>
+                        <input type="date" onchange="updateSession(${s.id}, 'date', this.value)" value="${s.date || new Date().toISOString().split('T')[0]}" ${disabled} class="w-full border-2 rounded px-3 py-2 ${disClass}">
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                        <h3 class="font-bold mb-3">Paramètres par série</h3>
+                        ${s.series.map(serie => `
+                            <div class="bg-white p-3 rounded mb-3">
+                                <h4 class="font-semibold text-blue-900 mb-2">Série ${serie.num} ${isTheme1 && serie.num > 2 ? '(2ème série)' : isTheme1 ? '(1ère série)' : ''}</h4>
+                                <div class="grid grid-cols-4 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold mb-1">FC fin effort</label>
+                                        <input type="number" onchange="updateSerie(${s.id}, ${serie.num}, 'fcFin', this.value)" value="${serie.fcFin}" ${disabled} placeholder="bpm" class="w-full border rounded px-2 py-1 text-sm ${disClass}">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold mb-1">Hauteur</label>
+                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'hauteur', this.value)" ${disabled} class="w-full border rounded px-2 py-1 text-sm ${disClass}">
+                                            <option value="">-</option>
+                                            <option value="oui" ${serie.hauteur === 'oui' ? 'selected' : ''}>Oui</option>
+                                            <option value="non" ${serie.hauteur === 'non' ? 'selected' : ''}>Non</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold mb-1">Saut</label>
+                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'saut', this.value)" ${disabled} class="w-full border rounded px-2 py-1 text-sm ${disClass}">
+                                            <option value="">-</option>
+                                            <option value="oui" ${serie.saut === 'oui' ? 'selected' : ''}>Oui</option>
+                                            <option value="non" ${serie.saut === 'non' ? 'selected' : ''}>Non</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold mb-1">Bras</label>
+                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'bras', this.value)" ${disabled} class="w-full border rounded px-2 py-1 text-sm ${disClass}">
+                                            <option value="">-</option>
+                                            <option value="oui" ${serie.bras === 'oui' ? 'selected' : ''}>Oui</option>
+                                            <option value="non" ${serie.bras === 'non' ? 'selected' : ''}>Non</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-4">
+                                        <label class="block text-xs font-semibold mb-1">Lest</label>
+                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'lest', this.value)" ${disabled} class="w-full border rounded px-2 py-1 text-sm ${disClass}">
+                                            <option value="">Aucun</option>
+                                            <option value="cheville" ${serie.lest === 'cheville' ? 'selected' : ''}>Cheville</option>
+                                            <option value="haltere" ${serie.lest === 'haltere' ? 'selected' : ''}>Haltère</option>
+                                            <option value="les-deux" ${serie.lest === 'les-deux' ? 'selected' : ''}>Les deux (cheville + haltère)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-lg mb-4">
+                        <h3 class="font-bold mb-3">Sensations et Bilan</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-xs font-semibold mb-2">Objectif de FC atteint ?</label>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="updateSession(${s.id}, 'fcReussie', 'oui'); render();" 
+                                        class="flex-1 px-3 py-2 rounded border-2 ${s.fcReussie === 'oui' ? 'bg-green-500 text-white border-green-600' : 'bg-white border-gray-300'} hover:border-green-400">
+                                    ✅ Oui
+                                </button>
+                                <button type="button" onclick="updateSession(${s.id}, 'fcReussie', 'non'); render();" 
+                                        class="flex-1 px-3 py-2 rounded border-2 ${s.fcReussie === 'non' ? 'bg-red-500 text-white border-red-600' : 'bg-white border-gray-300'} hover:border-red-400">
+                                    ❌ Non
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4 mb-3">
+                            <div>
+                                <label class="block text-xs font-semibold mb-2">Difficulté de la séance</label>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="updateSession(${s.id}, 'difficulteGlobale', 'facile'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.difficulteGlobale === 'facile' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300'} hover:border-green-400" title="Facile">
+                                        😊
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'difficulteGlobale', 'moyen'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.difficulteGlobale === 'moyen' ? 'bg-yellow-100 border-yellow-500' : 'bg-white border-gray-300'} hover:border-yellow-400" title="Moyen">
+                                        😐
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'difficulteGlobale', 'difficile'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.difficulteGlobale === 'difficile' ? 'bg-orange-100 border-orange-500' : 'bg-white border-gray-300'} hover:border-orange-400" title="Difficile">
+                                        😓
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'difficulteGlobale', 'tres-difficile'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.difficulteGlobale === 'tres-difficile' ? 'bg-red-100 border-red-500' : 'bg-white border-gray-300'} hover:border-red-400" title="Très difficile">
+                                        😰
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold mb-2">Niveau de fatigue</label>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="updateSession(${s.id}, 'fatigue', 'aucune'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.fatigue === 'aucune' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300'} hover:border-green-400" title="Aucune fatigue">
+                                        💪
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'fatigue', 'legere'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.fatigue === 'legere' ? 'bg-yellow-100 border-yellow-500' : 'bg-white border-gray-300'} hover:border-yellow-400" title="Légère">
+                                        😌
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'fatigue', 'moyenne'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.fatigue === 'moyenne' ? 'bg-orange-100 border-orange-500' : 'bg-white border-gray-300'} hover:border-orange-400" title="Moyenne">
+                                        😮‍💨
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'fatigue', 'forte'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.fatigue === 'forte' ? 'bg-red-100 border-red-500' : 'bg-white border-gray-300'} hover:border-red-400" title="Forte fatigue">
+                                        🥵
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold mb-2">Transpiration</label>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="updateSession(${s.id}, 'transpirationNiveau', 'faible'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.transpirationNiveau === 'faible' ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'} hover:border-blue-400" title="Faible">
+                                        💧
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'transpirationNiveau', 'moyenne'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.transpirationNiveau === 'moyenne' ? 'bg-cyan-100 border-cyan-500' : 'bg-white border-gray-300'} hover:border-cyan-400" title="Moyenne">
+                                        💦
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'transpirationNiveau', 'importante'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.transpirationNiveau === 'importante' ? 'bg-blue-200 border-blue-600' : 'bg-white border-gray-300'} hover:border-blue-500" title="Importante">
+                                        💦💦
+                                    </button>
+                                    <button type="button" onclick="updateSession(${s.id}, 'transpirationNiveau', 'tres-importante'); render();" 
+                                            class="flex-1 px-2 py-3 rounded border-2 text-2xl ${s.transpirationNiveau === 'tres-importante' ? 'bg-blue-300 border-blue-700' : 'bg-white border-gray-300'} hover:border-blue-600" title="Très importante">
+                                        💦💦💦
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Commentaires / Sensations supplémentaires</label>
+                            <textarea onchange="updateSession(${s.id}, 'sensations', this.value)" ${disabled} rows="2" class="w-full border rounded px-2 py-2 text-sm ${disClass}" placeholder="Décrivez vos sensations pendant la séance...">${s.sensations}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="font-bold mb-2">Bilan</h3>
+                        <textarea onchange="updateSession(${s.id}, 'bilan', this.value)" ${disabled} rows="4" class="w-full border rounded px-3 py-2 text-sm ${disClass}">${s.bilan}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadStudentsList() {
+            getStudentsListFromFirebase((students) => {
+                state.allStudents = students;
+                displayStudentsList();
+            });
+        }
+
+        function displayStudentsList() {
+            const listDiv = document.getElementById('studentsList');
+            if (!listDiv) return;
+
+            let filteredStudents = state.allStudents;
+            if (state.selectedClasse) {
+                filteredStudents = state.allStudents.filter(s => s.classe === state.selectedClasse);
+            }
+
+            // Mettre à jour le filtre de classe
+            const classeFilter = document.getElementById('classeFilter');
+            if (classeFilter) {
+                const classes = [...new Set(state.allStudents.map(s => s.classe).filter(c => c))];
+                classeFilter.innerHTML = '<option value="">Toutes les classes</option>' +
+                    classes.sort().map(c => `<option value="${c}" ${state.selectedClasse === c ? 'selected' : ''}>${c}</option>`).join('');
+            }
+
+            if (filteredStudents.length === 0) {
+                listDiv.innerHTML = '<p class="text-center text-gray-500 py-8">Aucun carnet enregistré</p>';
+            } else {
+                listDiv.innerHTML = filteredStudents.map(s => `
+                    <div class="border-2 rounded-lg p-3 sm:p-4 mb-3 hover:border-blue-400">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-base sm:text-lg">${s.nom} ${s.prenom}</h3>
+                                <p class="text-xs sm:text-sm text-gray-600">Classe: ${s.classe}</p>
+                                <p class="text-xs text-gray-500">ID: ${s.id}</p>
+                                ${s.lastUpdate ? `<p class="text-xs text-gray-400">Dernière MAJ: ${new Date(s.lastUpdate).toLocaleString('fr-FR')}</p>` : ''}
+                            </div>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button onclick="viewStudent('${s.id}')" class="flex-1 sm:flex-none px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">Consulter</button>
+                                <button onclick="deleteStudent('${s.id}', '${s.nom} ${s.prenom}')" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function filterByClasse() {
+            const select = document.getElementById('classeFilter');
+            state.selectedClasse = select ? select.value : '';
+            displayStudentsList();
+        }
+
+        function deleteStudent(studentId, studentName) {
+            if (!confirm(`Voulez-vous vraiment supprimer le carnet de ${studentName} ?`)) {
+                return;
+            }
+
+            if (isFirebaseReady) {
+                db.ref('students/' + studentId).remove()
+                    .then(() => {
+                        localStorage.removeItem(`step-profile-${studentId}`);
+                        localStorage.removeItem(`step-sessions-${studentId}`);
+                        alert('✅ Carnet supprimé');
+                        refreshStudentsList();
+                    })
+                    .catch((error) => {
+                        console.error("Erreur suppression:", error);
+                        alert('❌ Erreur lors de la suppression');
+                    });
+            } else {
+                localStorage.removeItem(`step-profile-${studentId}`);
+                localStorage.removeItem(`step-sessions-${studentId}`);
+                alert('✅ Carnet supprimé localement');
+                refreshStudentsList();
+            }
+        }
+
+        function deleteAllStudents() {
+            if (!confirm('⚠️ ATTENTION ! Voulez-vous vraiment supprimer TOUS les carnets ?\n\nCette action est irréversible !')) {
+                return;
+            }
+
+            if (!confirm('Êtes-vous ABSOLUMENT SÛR ? Tous les carnets de tous les élèves seront supprimés définitivement !')) {
+                return;
+            }
+
+            if (isFirebaseReady) {
+                db.ref('students').remove()
+                    .then(() => {
+                        // Supprimer aussi en local
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                            const key = localStorage.key(i);
+                            if (key.startsWith('step-profile-') || key.startsWith('step-sessions-')) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                        alert('✅ Tous les carnets ont été supprimés');
+                        refreshStudentsList();
+                    })
+                    .catch((error) => {
+                        console.error("Erreur suppression globale:", error);
+                        alert('❌ Erreur lors de la suppression');
+                    });
+            } else {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('step-profile-') || key.startsWith('step-sessions-')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                alert('✅ Tous les carnets ont été supprimés localement');
+                refreshStudentsList();
+            }
+        }
+
+        function refreshStudentsList() {
+            const listDiv = document.getElementById('studentsList');
+            if (listDiv) listDiv.innerHTML = '<p class="text-center text-gray-500">Actualisation...</p>';
+            loadStudentsList();
+        }
+
+        function switchMode(mode) {
+            if (mode === 'teacher' && !state.isTeacherAuthenticated) {
+                alert('🔒 Accès refusé. Veuillez utiliser le bouton Mode Professeur pour vous authentifier.');
+                return;
+            }
+            state.viewMode = mode;
+            state.studentId = '';
+            state.currentPage = 0;
+            render();
+        }
+
+        function attemptTeacherMode() {
+            if (state.isTeacherAuthenticated) {
+                // Déjà authentifié, basculer en mode professeur
+                switchModeDirectly('teacher');
+                return;
+            }
+
+            // Demander le mot de passe
+            const password = prompt('🔒 Mode Professeur\n\nVeuillez entrer le mot de passe :');
+            
+            if (password === null) {
+                // Utilisateur a annulé
+                return;
+            }
+
+            if (password === TEACHER_PASSWORD) {
+                state.isTeacherAuthenticated = true;
+                alert('✅ Authentification réussie !');
+                switchModeDirectly('teacher');
+            } else {
+                alert('❌ Mot de passe incorrect !');
+            }
+        }
+
+        function switchModeDirectly(mode) {
+            state.viewMode = mode;
+            state.studentId = '';
+            state.currentPage = 0;
+            render();
+        }
+
+        function logoutTeacher() {
+            state.isTeacherAuthenticated = false;
+            switchModeDirectly('student');
+            alert('👋 Déconnexion du mode professeur');
+        }
+
+        function loadStudent() {
+            const id = document.getElementById('idInput').value.trim().toLowerCase();
+            if (id) {
+                state.studentId = id;
+                loadData();
+            }
+        }
+
+        function loadOrCreateStudent() {
+            const id = document.getElementById('idInput').value.trim().toLowerCase();
+            if (!id) {
+                alert('⚠️ Veuillez entrer un identifiant');
+                return;
+            }
+            
+            state.studentId = id;
+            
+            // Charger les données existantes ou créer un nouveau carnet
+            if (isFirebaseReady) {
+                db.ref('students/' + id).once('value').then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        // Carnet existant
+                        if (data.profile) state.profileData = data.profile;
+                        if (data.sessions) state.sessions = data.sessions;
+                    } else {
+                        // Nouveau carnet - réinitialiser les données
+                        resetStateData();
+                        // Mettre la date du jour sur toutes les séances
+                        const today = new Date().toISOString().split('T')[0];
+                        state.sessions.forEach(session => {
+                            session.date = today;
+                        });
+                    }
+                    render();
+                }).catch((error) => {
+                    console.error("Erreur:", error);
+                    loadDataFromLocal();
+                    render();
+                });
+            } else {
+                // Mode hors ligne
+                const profile = localStorage.getItem(`step-profile-${id}`);
+                if (profile) {
+                    loadDataFromLocal();
+                } else {
+                    resetStateData();
+                    // Mettre la date du jour sur toutes les séances
+                    const today = new Date().toISOString().split('T')[0];
+                    state.sessions.forEach(session => {
+                        session.date = today;
+                    });
+                }
+                render();
+            }
+        }
+
+        function viewStudent(id) {
+            state.studentId = id;
+            state.currentPage = 0;
+            
+            if (isFirebaseReady) {
+                db.ref('students/' + id).once('value').then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        if (data.profile) state.profileData = data.profile;
+                        if (data.sessions) state.sessions = data.sessions;
+                    }
+                    render();
+                }).catch((error) => {
+                    console.error("Erreur:", error);
+                    loadDataFromLocal();
+                    render();
+                });
+            } else {
+                loadDataFromLocal();
+                render();
+            }
+        }
+
+        function updateProfile(field, value) {
+            state.profileData[field] = value;
+        }
+
+        function updateSession(id, field, value) {
+            const idx = state.sessions.findIndex(s => s.id === id);
+            if (idx !== -1) state.sessions[idx][field] = value;
+        }
+
+        function updateSerie(sessionId, serieNum, field, value) {
+            const idx = state.sessions.findIndex(s => s.id === sessionId);
+            if (idx !== -1) {
+                const serieIdx = state.sessions[idx].series.findIndex(s => s.num === serieNum);
+                if (serieIdx !== -1) state.sessions[idx].series[serieIdx][field] = value;
+            }
+        }
+
+        function prevPage() {
+            if (state.currentPage > 0) {
+                state.currentPage--;
+                render();
+            }
+        }
+
+        function nextPage() {
+            if (state.currentPage < 8) {
+                state.currentPage++;
+                render();
+            }
+        }
+
+        function backToTeacherList() {
+            state.studentId = '';
+            state.currentPage = 0;
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
