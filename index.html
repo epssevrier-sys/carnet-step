@@ -104,7 +104,11 @@
                     { num: 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
                     { num: 2, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
                     { num: 3, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
-                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
+                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 5, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 6, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 7, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 8, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
                 ],
                                     fcApres: '', souffle: '', transpiration: '', sensations: '', bilan: '',
                     fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: '',
@@ -175,6 +179,7 @@
         function saveDataToLocal() {
             localStorage.setItem(`step-profile-${state.studentId}`, JSON.stringify(state.profileData));
             localStorage.setItem(`step-sessions-${state.studentId}`, JSON.stringify(state.sessions));
+            localStorage.setItem('lastStudentId', state.studentId); // Mémoriser le dernier ID
         }
 
         function loadDataFromLocal() {
@@ -236,7 +241,11 @@
                     { num: 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
                     { num: 2, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
                     { num: 3, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
-                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
+                    { num: 4, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 5, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 6, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 7, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' },
+                    { num: 8, fcFin: '', hauteur: '', saut: '', bras: '', lest: '' }
                 ],
                 fcApres: '', souffle: '', transpiration: '', sensations: '', bilan: '',
                 fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: ''
@@ -503,9 +512,9 @@
 
                     <div class="bg-blue-50 p-4 rounded-lg mb-4">
                         <h3 class="font-bold mb-3">Paramètres par série</h3>
-                        ${s.series.map(serie => `
+                        ${s.series.filter(serie => isTheme1 || serie.num <= 4).map(serie => `
                             <div class="bg-white p-3 rounded mb-3">
-                                <h4 class="font-semibold text-blue-900 mb-2">Série ${serie.num} ${isTheme1 && serie.num > 2 ? '(2ème série)' : isTheme1 ? '(1ère série)' : ''}</h4>
+                                <h4 class="font-semibold text-blue-900 mb-2">Série ${serie.num}${isTheme1 ? (serie.num <= 4 ? ' (1ère série 4×4min)' : ' (2ème série 4×4min)') : ''}</h4>
                                 <div class="grid grid-cols-4 gap-3">
                                     <div>
                                         <label class="block text-xs font-semibold mb-1">FC fin effort</label>
@@ -933,6 +942,24 @@
             state.currentPage = 0;
             render();
         }
+
+        // Sauvegarde automatique toutes les 30 secondes (seulement en mode élève)
+        setInterval(() => {
+            if (state.viewMode === 'student' && state.studentId && state.currentPage > 0) {
+                console.log('💾 Sauvegarde automatique...');
+                saveDataToLocal(); // Sauvegarde locale silencieuse
+            }
+        }, 30000); // 30 secondes
+
+        // Charger les données au démarrage si un ID est en localStorage
+        window.addEventListener('load', () => {
+            const lastStudentId = localStorage.getItem('lastStudentId');
+            if (lastStudentId && state.viewMode === 'student') {
+                state.studentId = lastStudentId;
+                loadDataFromLocal();
+                render();
+            }
+        });
 
         render();
     </script>
