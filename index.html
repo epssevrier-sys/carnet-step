@@ -883,6 +883,28 @@
             }
         }
 
+        // ✨ NOUVELLE FONCTION - Crée un nouvel identifiant et passe directement au profil
+        function createNewStudent() {
+            const id = document.getElementById('idInput').value.trim().toLowerCase();
+            if (!id) {
+                alert('⚠️ Veuillez entrer un identifiant');
+                return;
+            }
+            
+            state.studentId = id;
+            resetStateData();
+            
+            // Mettre la date du jour sur toutes les séances
+            const today = new Date().toISOString().split('T')[0];
+            state.sessions.forEach(session => {
+                session.date = today;
+            });
+            
+            // Passer automatiquement à la page de profil (currentPage = 0)
+            state.currentPage = 0;
+            render();
+        }
+
         function viewStudent(id) {
             state.studentId = id;
             state.currentPage = 0;
