@@ -1261,6 +1261,31 @@
             alert('✅ Modifications sauvegardées !\n\nLe carnet de l\'élève a été mis à jour.');
         }
 
+        function unlockTemporarily(sessionId) {
+            if (!confirm('Débloquer temporairement cette séance pour que l\'élève puisse la modifier ?\n\n⏱️ L\'élève pourra modifier pendant 24h, puis la séance se re-verrouillera automatiquement.')) {
+                return;
+            }
+            
+            const sessionIndex = sessionId - 1;
+            
+            // Débloquer la séance
+            state.sessions[sessionIndex].locked = false;
+            
+            // Définir une date d'expiration du déverrouillage (24h)
+            const tomorrow = new Date();
+            tomorrow.setHours(tomorrow.getHours() + 24);
+            state.sessions[sessionIndex].unlockExpiry = tomorrow.toISOString();
+            
+            console.log('🔓 Séance', sessionId, 'débloquée temporairement (24h)');
+            
+            // Sauvegarder
+            saveDataToFirebase();
+            
+            alert('✅ Séance débloquée !\n\nL\'élève peut maintenant modifier cette séance pendant 24h.\n\nAprès 24h, elle se re-verrouillera automatiquement.');
+            
+            render();
+        }
+
         function unlockSession(sessionId) {
             if (!confirm('Êtes-vous sûr de vouloir déverrouiller cette séance ?\n\nL\'élève pourra la modifier à nouveau.')) {
                 return;
