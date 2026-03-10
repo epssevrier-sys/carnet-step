@@ -298,7 +298,21 @@
         // Vérifier si une séance est verrouillée
         function isSessionLocked(session) {
             // Si manuellement verrouillée (clic Enregistrer)
-            if (session.locked) return true;
+            if (session.locked) {
+                // Vérifier si déverrouillage temporaire actif
+                if (session.unlockExpiry) {
+                    const expiry = new Date(session.unlockExpiry);
+                    const now = new Date();
+                    if (now < expiry) {
+                        // Déverrouillage temporaire toujours actif
+                        return false;
+                    } else {
+                        // Déverrouillage expiré, supprimer
+                        delete session.unlockExpiry;
+                    }
+                }
+                return true;
+            }
             
             // Si J+1 après la date
             if (!session.date) return false;
