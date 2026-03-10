@@ -533,7 +533,9 @@
             const isTheme1 = state.profileData.theme === 'theme1';
             const isLocked = !isTeacher && isSessionLocked(s);
             const profEditable = isTeacher; // Prof peut toujours modifier
-            const lockDisabled = (isTeacher || !isLocked) ? '' : 'disabled';
+            // Vérifier si déverrouillage temporaire actif
+            const hasUnlockExpiry = s.unlockExpiry && new Date(s.unlockExpiry) > new Date();
+            const lockDisabled = (isTeacher || !isLocked || hasUnlockExpiry) ? '' : 'disabled';
             const lockClass = isTeacher ? 'border-orange-300' : (isLocked ? 'bg-gray-100 cursor-not-allowed' : disClass);
             
             return `
