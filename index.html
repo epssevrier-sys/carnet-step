@@ -534,7 +534,7 @@
             const isLocked = !isTeacher && isSessionLocked(s);
             const profEditable = isTeacher; // Prof peut toujours modifier
             const lockDisabled = (isTeacher || !isLocked) ? '' : 'disabled';
-            const lockClass = isTeacher ? 'border-orange-300' : (isLocked ? 'bg-gray-100 cursor-not-allowed' : disClass);
+
             
             return `
                 <div class="bg-white p-6 rounded-lg shadow-lg mb-4">
@@ -1289,17 +1289,22 @@
             
             const sessionIndex = sessionId - 1;
             
-            // Débloquer la séance
-            state.sessions[sessionIndex].locked = false;
+            // GARDER locked=true mais ajouter unlockExpiry
+            if (state.sessions[sessionIndex].locked === undefined) {
+                state.sessions[sessionIndex].locked = true;
+            }
             
             // Définir une date d'expiration du déverrouillage (24h)
             const tomorrow = new Date();
             tomorrow.setHours(tomorrow.getHours() + 24);
             state.sessions[sessionIndex].unlockExpiry = tomorrow.toISOString();
             
-            console.log('🔓 Séance', sessionId, 'débloquée temporairement (24h)');
+            console.log('🔓 Séance', sessionId, 'débloquée temporairement (24h)', {
+                locked: state.sessions[sessionIndex].locked,
+                unlockExpiry: state.sessions[sessionIndex].unlockExpiry
+            });
             
-            // Sauvegarder
+            // Sauvegarder dans Firebase
             saveDataToFirebase();
             
             alert('✅ Séance débloquée !\n\nL\'élève peut maintenant modifier cette séance pendant 24h.\n\nAprès 24h, elle se re-verrouillera automatiquement.');
