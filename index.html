@@ -533,9 +533,7 @@
             const isTheme1 = state.profileData.theme === 'theme1';
             const isLocked = !isTeacher && isSessionLocked(s);
             const profEditable = isTeacher; // Prof peut toujours modifier
-            // Vérifier si déverrouillage temporaire actif
-            const hasUnlockExpiry = s.unlockExpiry && new Date(s.unlockExpiry) > new Date();
-            const lockDisabled = (isTeacher || !isLocked || hasUnlockExpiry) ? '' : 'disabled';
+            const lockDisabled = (isTeacher || !isLocked) ? '' : 'disabled';
             const lockClass = isTeacher ? 'border-orange-300' : (isLocked ? 'bg-gray-100 cursor-not-allowed' : disClass);
             
             return `
@@ -582,6 +580,13 @@
                             <p class="text-xs text-blue-600 mt-1">
                                 Tu peux modifier cette séance jusqu'au ${new Date(s.unlockExpiry).toLocaleString('fr-FR')}
                             </p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- DEBUG INFO -->
+                    ${!isTeacher ? `
+                        <div class="bg-purple-100 border-2 border-purple-500 p-2 mb-2 text-xs">
+                            <strong>DEBUG:</strong> locked=${s.locked} | unlockExpiry=${s.unlockExpiry ? 'OUI' : 'NON'} | isLocked=${isLocked} | lockDisabled="${lockDisabled}"
                         </div>
                     ` : ''}
                     
