@@ -559,6 +559,49 @@
                         </p>
                     </div>
                     
+                    
+                    <!-- FC CIBLES -->
+                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
+                        <p class="font-bold text-yellow-900 mb-2 text-sm">🎯 Objectifs de Fréquence Cardiaque</p>
+                        <div class="text-sm">
+                            ${(() => {
+                                const age = parseInt(state.profileData.age) || 18;
+                                const fcRepos = parseInt(state.profileData.fcRepos) || 60;
+                                const fcMax = 220 - age;
+                                const fcReserve = fcMax - fcRepos;
+                                
+                                if (state.profileData.theme === 'theme1') {
+                                    const fcMin = Math.round(fcRepos + (fcReserve * 0.85));
+                                    const fcMax95 = Math.round(fcRepos + (fcReserve * 0.95));
+                                    return `<p class="font-semibold text-red-700">FC cible : ≥ ${fcMin} bpm (85% FCR)</p>
+                                            <p class="text-xs text-gray-700 mt-1">Zone optimale : ${fcMin} - ${fcMax95} bpm</p>`;
+                                } else {
+                                    const fcMin = Math.round(fcRepos + (fcReserve * 0.70));
+                                    const fcMax85 = Math.round(fcRepos + (fcReserve * 0.85));
+                                    return `<p class="font-semibold text-red-700">FC cible : ≥ ${fcMin} bpm (70% FCR)</p>
+                                            <p class="text-xs text-gray-700 mt-1">Zone optimale : ${fcMin} - ${fcMax85} bpm</p>`;
+                                }
+                            })()}
+                        </div>
+                    </div>
+
+                    <!-- BOUTONS PROFESSEUR -->
+                    ${isTeacher && isLocked ? `
+                        <div style="background-color: #FFA500; border: 6px solid #FF8C00; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                            <p style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">👨‍🏫 ACTIONS PROFESSEUR</p>
+                            <div style="display: flex; gap: 15px;">
+                                <button onclick="unlockSession(${s.id})" 
+                                        style="flex: 1; padding: 20px; background-color: #22C55E; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">
+                                    🔓 DÉVERROUILLER
+                                </button>
+                                <button onclick="effacerSeance(${s.id})" 
+                                        style="flex: 1; padding: 20px; background-color: #EF4444; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">
+                                    🗑️ EFFACER
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
                         <h3 class="font-bold text-purple-900 mb-2">⏱️ Séquences de travail - ${isTheme1 ? 'Thème 1' : 'Thème 2'}</h3>
                         ${isTheme1 ? `
@@ -1232,6 +1275,31 @@
             saveDataToFirebase();
             
             alert('✅ Modifications sauvegardées !\n\nLe carnet de l\'élève a été mis à jour.');
+        }
+
+
+        function effacerSeance(sessionId) {
+            if (!confirm('⚠️ EFFACER toutes les données de cette séance ?\n\nIRRÉVERSIBLE !')) {
+                return;
+            }
+            
+            const sessionIndex = sessionId - 1;
+            const isTheme1 = state.profileData.theme === 'theme1';
+            
+            state.sessions[sessionIndex] = {
+                id: sessionId,
+                date: '',
+                locked: false,
+                observationsProf: '',
+                series: Array(isTheme1 ? 8 : 4).fill(null).map((_, i) => ({
+                    num: i + 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: ''
+                })),
+                fcReussie: '', difficulteGlobale: '', fatigue: '', transpirationNiveau: '', bilan: ''
+            };
+            
+            saveDataToFirebase();
+            alert('✅ Séance effacée !');
+            render();
         }
 
         function unlockSession(sessionId) {
