@@ -297,22 +297,27 @@
 
         // Vérifier si une séance est verrouillée
         function isSessionLocked(session) {
-            // Si manuellement verrouillée (clic Enregistrer)
-            if (session.locked) return true;
+            // Verrouillage si l'élève a cliqué Enregistrer
+            if (session.locked) {
+                return true;
+            }
             
-            // Si J+1 après la date
-            if (!session.date) return false;
+            // OU verrouillage automatique 24h après la date de la séance
+            if (session.date) {
+                const sessionDate = new Date(session.date);
+                const now = new Date();
+                
+                // Calculer la différence en heures
+                const diffMs = now - sessionDate;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                
+                // Si plus de 24h après la date de la séance
+                if (diffHours >= 24) {
+                    return true;
+                }
+            }
             
-            const sessionDateObj = new Date(session.date);
-            const today = new Date();
-            
-            sessionDateObj.setHours(0, 0, 0, 0);
-            today.setHours(0, 0, 0, 0);
-            
-            const diffTime = today - sessionDateObj;
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            return diffDays >= 1;
+            return false;
         }
 
         function calcFCMax() {
