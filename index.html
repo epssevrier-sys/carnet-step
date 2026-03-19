@@ -298,21 +298,7 @@
         // Vérifier si une séance est verrouillée
         function isSessionLocked(session) {
             // Si manuellement verrouillée (clic Enregistrer)
-            if (session.locked) {
-                // Vérifier si déverrouillage temporaire actif
-                if (session.unlockExpiry) {
-                    const expiry = new Date(session.unlockExpiry);
-                    const now = new Date();
-                    if (now < expiry) {
-                        // Déverrouillage temporaire toujours actif
-                        return false;
-                    } else {
-                        // Déverrouillage expiré, supprimer
-                        delete session.unlockExpiry;
-                    }
-                }
-                return true;
-            }
+            if (session.locked) return true;
             
             // Si J+1 après la date
             if (!session.date) return false;
@@ -534,7 +520,7 @@
             const isLocked = !isTeacher && isSessionLocked(s);
             const profEditable = isTeacher; // Prof peut toujours modifier
             const lockDisabled = (isTeacher || !isLocked) ? '' : 'disabled';
-
+            const lockClass = isTeacher ? 'border-orange-300' : (isLocked ? 'bg-gray-100 cursor-not-allowed' : disClass);
             
             return `
                 <div class="bg-white p-6 rounded-lg shadow-lg mb-4">
@@ -554,61 +540,6 @@
                         ` : ''}
                     </div>` : ''}
                     
-                    <!-- BOUTONS DE DÉVERROUILLAGE PROFESSEUR -->
-                    ${isTeacher ? `
-                        <div class="bg-orange-50 border-2 border-orange-400 rounded-lg p-4 mb-4">
-                            <p class="text-sm font-semibold text-orange-900 mb-3">🔓 Options de déverrouillage ${isLocked ? '(Séance verrouillée)' : '(Séance non verrouillée)'}</p>
-                            <div class="flex gap-3">
-                                <button onclick="unlockTemporarily(${s.id})" 
-                                        class="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold shadow-lg text-sm">
-                                    🔓 Débloquer pour l'élève<br><span class="text-xs font-normal">(24 heures)</span>
-                                </button>
-                                <button onclick="unlockSession(${s.id})" 
-                                        class="flex-1 px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold shadow-lg text-sm">
-                                    🔓 Déverrouiller<br><span class="text-xs font-normal">(définitif)</span>
-                                </button>
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- ENCADRÉ DÉVERROUILLAGE ACTIF (ÉLÈVE) -->
-                    ${!isTeacher && s.unlockExpiry ? `
-                        <div class="bg-blue-100 border-2 border-blue-500 rounded-lg p-3 mb-4">
-                            <p class="text-sm font-semibold text-blue-800">
-                                🔓 Déverrouillage temporaire actif
-                            </p>
-                            <p class="text-xs text-blue-600 mt-1">
-                                Tu peux modifier cette séance jusqu'au ${new Date(s.unlockExpiry).toLocaleString('fr-FR')}
-                            </p>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- DEBUG INFO -->
-                    ${!isTeacher ? `
-                        <div class="bg-purple-100 border-2 border-purple-500 p-2 mb-2 text-xs">
-                            <strong>DEBUG:</strong> locked=${s.locked} | unlockExpiry=${s.unlockExpiry ? 'OUI' : 'NON'} | isLocked=${isLocked} | lockDisabled="${lockDisabled}"
-                        </div>
-                    ` : ''}
-                    
-                    <!-- FC CIBLES -->
-                    <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 mb-4">
-                        <h3 class="font-bold text-yellow-900 mb-2 text-sm">🎯 Objectifs de Fréquence Cardiaque</h3>
-                        <div class="text-sm">
-                            <p class="font-semibold text-red-700">
-                                FC cible : ${state.profileData.theme === 'theme1' 
-                                    ? `≥ ${calcFCE()} bpm (85% FCR)`
-                                    : `≥ ${calcFCE()} bpm (70% FCR)`
-                                }
-                            </p>
-                            <p class="text-xs text-gray-700 mt-1">
-                                Zone optimale : ${state.profileData.theme === 'theme1'
-                                    ? `${calcFCE()} - ${Math.round(parseInt(state.profileData.fcRepos) + (calcFCReserve() * 0.95))} bpm (85-95% FCR)`
-                                    : `${calcFCE()} - ${calcFCEMax()} bpm (70-85% FCR)`
-                                }
-                            </p>
-                        </div>
-                    </div>
-
                     <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
                         <h3 class="font-bold text-purple-900 mb-2">⏱️ Séquences de travail - ${isTheme1 ? 'Thème 1' : 'Thème 2'}</h3>
                         ${isTheme1 ? `
@@ -1280,37 +1211,6 @@
             saveDataToFirebase();
             
             alert('✅ Modifications sauvegardées !\n\nLe carnet de l\'élève a été mis à jour.');
-        }
-
-        function unlockTemporarily(sessionId) {
-            if (!confirm('Débloquer temporairement cette séance pour que l\'élève puisse la modifier ?\n\n⏱️ L\'élève pourra modifier pendant 24h, puis la séance se re-verrouillera automatiquement.')) {
-                return;
-            }
-            
-            const sessionIndex = sessionId - 1;
-            
-            // S'assurer que locked existe et est à true
-            if (!state.sessions[sessionIndex].locked) {
-                state.sessions[sessionIndex].locked = true;
-            }
-            
-            // Définir une date d'expiration du déverrouillage (24h)
-            const tomorrow = new Date();
-            tomorrow.setHours(tomorrow.getHours() + 24);
-            state.sessions[sessionIndex].unlockExpiry = tomorrow.toISOString();
-            
-            console.log('🔓 Séance', sessionId, 'débloquée temporairement (24h)', {
-                sessionId: sessionId,
-                locked: state.sessions[sessionIndex].locked,
-                unlockExpiry: state.sessions[sessionIndex].unlockExpiry
-            });
-            
-            // Sauvegarder
-            saveDataToFirebase();
-            
-            alert('✅ Séance débloquée !\n\nL\'élève peut maintenant modifier cette séance pendant 24h.\n\nAprès 24h, elle se re-verrouillera automatiquement.');
-            
-            render();
         }
 
         function unlockSession(sessionId) {
