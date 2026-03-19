@@ -1289,8 +1289,8 @@
             
             const sessionIndex = sessionId - 1;
             
-            // GARDER locked=true mais ajouter unlockExpiry
-            if (state.sessions[sessionIndex].locked === undefined) {
+            // S'assurer que locked existe et est à true
+            if (!state.sessions[sessionIndex].locked) {
                 state.sessions[sessionIndex].locked = true;
             }
             
@@ -1300,11 +1300,12 @@
             state.sessions[sessionIndex].unlockExpiry = tomorrow.toISOString();
             
             console.log('🔓 Séance', sessionId, 'débloquée temporairement (24h)', {
+                sessionId: sessionId,
                 locked: state.sessions[sessionIndex].locked,
                 unlockExpiry: state.sessions[sessionIndex].unlockExpiry
             });
             
-            // Sauvegarder dans Firebase
+            // Sauvegarder
             saveDataToFirebase();
             
             alert('✅ Séance débloquée !\n\nL\'élève peut maintenant modifier cette séance pendant 24h.\n\nAprès 24h, elle se re-verrouillera automatiquement.');
