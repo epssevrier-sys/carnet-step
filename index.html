@@ -987,13 +987,11 @@
         }
 
         function nextPage() {
-            console.log('🔵 CLIC SUIVANT - Page actuelle:', state.currentPage);
+            console.log('SUIVANT cliqué - Page:', state.currentPage);
             if (state.currentPage < 8) {
                 state.currentPage++;
-                console.log('✅ Passage à la page:', state.currentPage);
+                console.log('Nouvelle page:', state.currentPage);
                 render();
-            } else {
-                console.log('❌ Déjà sur la dernière page');
             }
         }
 
