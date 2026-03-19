@@ -531,14 +531,33 @@
                     ${isLocked ? `<div class="bg-red-100 border-2 border-red-500 rounded p-3 mb-4">
                         <p class="text-sm font-semibold text-red-800">🔒 Cette séance est verrouillée ${s.locked ? "(enregistrement effectué)" : "(plus de 24h après la date)"}</p>
                         <p class="text-xs text-red-600 mt-1">Les modifications ne sont plus possibles. ${isTeacher ? "Vous pouvez déverrouiller ci-dessous." : "Contactez votre professeur si nécessaire."}</p>
-                    </div>
-                        ${isTeacher ? `
-                            <button onclick="unlockSession(${s.id})" 
-                                    class="mt-3 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-semibold">
-                                🔓 Déverrouiller cette séance
-                            </button>
-                        ` : ''}
                     </div>` : ''}
+                    
+                    ${isTeacher && isLocked ? `
+                        <div class="bg-orange-50 border-4 border-orange-600 rounded-lg p-4 mb-4">
+                            <p class="font-bold text-orange-900 mb-3 text-lg">👨‍🏫 ACTIONS PROFESSEUR</p>
+                            <div class="flex gap-3">
+                                <button onclick="unlockSession(${s.id})" 
+                                        class="flex-1 px-5 py-4 bg-green-600 text-white rounded-lg font-bold text-base hover:bg-green-700">
+                                    🔓 DÉVERROUILLER
+                                </button>
+                                <button onclick="effacerSeance(${s.id})" 
+                                        class="flex-1 px-5 py-4 bg-red-600 text-white rounded-lg font-bold text-base hover:bg-red-700">
+                                    🗑️ EFFACER
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
+                        <p class="font-bold text-yellow-900 mb-2">🎯 Objectifs FC pour ce thème</p>
+                        <p class="text-sm font-semibold text-red-700">
+                            ${state.profileData.theme === 'theme1' ? 
+                                `FC cible : ≥ ${calcFCE()} bpm (85% FCR) | Zone : ${calcFCE()} - ${Math.round(state.profileData.fcRepos + (calcFCReserve() * 0.95))} bpm` : 
+                                `FC cible : ≥ ${calcFCE()} bpm (70% FCR) | Zone : ${calcFCE()} - ${calcFCEMax()} bpm`
+                            }
+                        </p>
+                    </div>
                     
                     <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
                         <h3 class="font-bold text-purple-900 mb-2">⏱️ Séquences de travail - ${isTheme1 ? 'Thème 1' : 'Thème 2'}</h3>
@@ -1233,37 +1252,21 @@
             render();
         }
 
-
-        function unlockSeance(sessionId) {
-            if (!confirm('Déverrouiller cette séance ?\n\nL\'élève pourra la modifier.')) {
-                return;
-            }
-            
-            const sessionIndex = sessionId - 1;
-            state.sessions[sessionIndex].locked = false;
-            
-            console.log('🔓 Séance', sessionId, 'déverrouillée');
-            
-            saveDataToFirebase();
-            alert('✅ Séance déverrouillée !');
-            render();
-        }
-
-
         function effacerSeance(sessionId) {
-            if (!confirm('⚠️ EFFACER toutes les données de cette séance ?\n\nCette action est IRRÉVERSIBLE !')) {
+            if (!confirm('⚠️ ATTENTION !\n\nVous allez EFFACER toutes les données de cette séance.\n\nCette action est IRRÉVERSIBLE !\n\nContinuer ?')) {
                 return;
             }
             
             const sessionIndex = sessionId - 1;
+            const isTheme1 = state.profileData.theme === 'theme1';
             
-            // Réinitialiser la séance
+            // Réinitialiser complètement la séance
             state.sessions[sessionIndex] = {
                 id: sessionId,
                 date: '',
                 locked: false,
                 observationsProf: '',
-                series: Array(8).fill(null).map((_, i) => ({
+                series: Array(isTheme1 ? 8 : 4).fill(null).map((_, i) => ({
                     num: i + 1,
                     fcFin: '',
                     hauteur: '',
@@ -1278,12 +1281,15 @@
                 bilan: ''
             };
             
-            console.log('🗑️ Séance', sessionId, 'effacée');
+            console.log('🗑️ Séance', sessionId, 'effacée par le professeur');
             
             saveDataToFirebase();
-            alert('✅ Séance effacée !\n\nLes données ont été supprimées.');
+            
+            alert('✅ Séance effacée !\n\nToutes les données ont été supprimées.');
+            
             render();
         }
+
 
         function backToTeacherList() {
             state.studentId = '';
