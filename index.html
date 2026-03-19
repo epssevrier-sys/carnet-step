@@ -549,128 +549,7 @@
                         </div>
                     ` : ''}
                     
-                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
-                        <p class="font-bold text-yellow-900 mb-2">🎯 Objectifs FC pour ce thème</p>
-                        <p class="text-sm font-semibold text-red-700">
-                            ${state.profileData.theme === 'theme1' ? 
-                                `FC cible : ≥ ${calcFCE()} bpm (85% FCR) | Zone : ${calcFCE()} - ${Math.round(state.profileData.fcRepos + (calcFCReserve() * 0.95))} bpm` : 
-                                `FC cible : ≥ ${calcFCE()} bpm (70% FCR) | Zone : ${calcFCE()} - ${calcFCEMax()} bpm`
-                            }
-                        </p>
-                    </div>
                     
-                    
-                    <!-- FC CIBLES -->
-                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
-                        <p class="font-bold text-yellow-900 mb-2 text-sm">🎯 Objectifs de Fréquence Cardiaque</p>
-                        <div class="text-sm">
-                            ${(() => {
-                                const age = parseInt(state.profileData.age) || 18;
-                                const fcRepos = parseInt(state.profileData.fcRepos) || 60;
-                                const fcMax = 220 - age;
-                                const fcReserve = fcMax - fcRepos;
-                                
-                                if (state.profileData.theme === 'theme1') {
-                                    const fcMin = Math.round(fcRepos + (fcReserve * 0.85));
-                                    const fcMax95 = Math.round(fcRepos + (fcReserve * 0.95));
-                                    return `<p class="font-semibold text-red-700">FC cible : ≥ ${fcMin} bpm (85% FCR)</p>
-                                            <p class="text-xs text-gray-700 mt-1">Zone optimale : ${fcMin} - ${fcMax95} bpm</p>`;
-                                } else {
-                                    const fcMin = Math.round(fcRepos + (fcReserve * 0.70));
-                                    const fcMax85 = Math.round(fcRepos + (fcReserve * 0.85));
-                                    return `<p class="font-semibold text-red-700">FC cible : ≥ ${fcMin} bpm (70% FCR)</p>
-                                            <p class="text-xs text-gray-700 mt-1">Zone optimale : ${fcMin} - ${fcMax85} bpm</p>`;
-                                }
-                            })()}
-                        </div>
-                    </div>
-
-                    <!-- BOUTONS PROFESSEUR -->
-                    ${isTeacher && isLocked ? `
-                        <div style="background-color: #FFA500; border: 6px solid #FF8C00; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
-                            <p style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">👨‍🏫 ACTIONS PROFESSEUR</p>
-                            <div style="display: flex; gap: 15px;">
-                                <button onclick="unlockSession(${s.id})" 
-                                        style="flex: 1; padding: 20px; background-color: #22C55E; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">
-                                    🔓 DÉVERROUILLER
-                                </button>
-                                <button onclick="effacerSeance(${s.id})" 
-                                        style="flex: 1; padding: 20px; background-color: #EF4444; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;">
-                                    🗑️ EFFACER
-                                </button>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
-                        <h3 class="font-bold text-purple-900 mb-2">⏱️ Séquences de travail - ${isTheme1 ? 'Thème 1' : 'Thème 2'}</h3>
-                        ${isTheme1 ? `
-                            <div class="text-sm space-y-1">
-                                <p class="font-semibold">📌 2 séries de 4×4 minutes</p>
-                                <p>• <strong>Série 1:</strong> 4×4 min (repos 2 min entre chaque répétition)</p>
-                                <p>• <strong>Repos entre séries:</strong> 4 minutes</p>
-                                <p>• <strong>Série 2:</strong> 4×4 min (repos 2 min entre chaque répétition)</p>
-                                <p class="text-purple-700 mt-2">💓 FC minimale de reprise: 110 bpm</p>
-                            </div>
-                        ` : `
-                            <div class="text-sm space-y-1">
-                                <p class="font-semibold">📌 4×10 minutes</p>
-                                <p>• 4 séries de 10 minutes (repos 4 min entre chaque série)</p>
-                                <p class="text-purple-700 mt-2">💓 FC minimale de reprise: 110 bpm</p>
-                            </div>
-                        `}
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold mb-1">Date de la séance</label>
-                        <input type="date" onchange="updateSession(${s.id}, 'date', this.value); render();" value="${s.date || new Date().toISOString().split('T')[0]}" ${lockDisabled} class="w-full border-2 rounded px-3 py-2 ${lockClass}">
-                        ${isLocked ? '<p class="text-xs text-red-600 mt-1">🔒 Verrouillé</p>' : ''}
-                    </div>
-
-                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
-                        <h3 class="font-bold mb-3">Paramètres par série</h3>
-                        ${s.series.filter(serie => isTheme1 || serie.num <= 4).map(serie => `
-                            <div class="bg-white p-3 rounded mb-3">
-                                <h4 class="font-semibold text-blue-900 mb-2">Série ${serie.num}${isTheme1 ? (serie.num <= 4 ? ' (1ère série 4×4min)' : ' (2ème série 4×4min)') : ''}</h4>
-                                <div class="grid grid-cols-4 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-semibold mb-1">FC fin effort</label>
-                                        <input type="number" onchange="updateSerie(${s.id}, ${serie.num}, 'fcFin', this.value)" value="${serie.fcFin}" ${lockDisabled} placeholder="bpm" class="w-full border rounded px-2 py-1 text-sm ${lockClass}">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold mb-1">Hauteur</label>
-                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'hauteur', this.value)" ${lockDisabled} class="w-full border rounded px-2 py-1 text-sm ${lockClass}">
-                                            <option value="">-</option>
-                                            <option value="oui" ${serie.hauteur === 'oui' ? 'selected' : ''}>Oui</option>
-                                            <option value="non" ${serie.hauteur === 'non' ? 'selected' : ''}>Non</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold mb-1">Saut</label>
-                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'saut', this.value)" ${lockDisabled} class="w-full border rounded px-2 py-1 text-sm ${lockClass}">
-                                            <option value="">-</option>
-                                            <option value="oui" ${serie.saut === 'oui' ? 'selected' : ''}>Oui</option>
-                                            <option value="non" ${serie.saut === 'non' ? 'selected' : ''}>Non</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold mb-1">Bras</label>
-                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'bras', this.value)" ${lockDisabled} class="w-full border rounded px-2 py-1 text-sm ${lockClass}">
-                                            <option value="">-</option>
-                                            <option value="oui" ${serie.bras === 'oui' ? 'selected' : ''}>Oui</option>
-                                            <option value="non" ${serie.bras === 'non' ? 'selected' : ''}>Non</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-span-4">
-                                        <label class="block text-xs font-semibold mb-1">Lest</label>
-                                        <select onchange="updateSerie(${s.id}, ${serie.num}, 'lest', this.value)" ${lockDisabled} class="w-full border rounded px-2 py-1 text-sm ${lockClass}">
-                                            <option value="">Aucun</option>
-                                            <option value="cheville" ${serie.lest === 'cheville' ? 'selected' : ''}>Cheville</option>
-                                            <option value="haltere" ${serie.lest === 'haltere' ? 'selected' : ''}>Haltère</option>
-                                            <option value="les-deux" ${serie.lest === 'les-deux' ? 'selected' : ''}>Les deux (cheville + haltère)</option>
-                                        </select>
-                                    </div>
-                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -1278,19 +1157,31 @@
         }
 
 
-        function effacerSeance(sessionId) {
-            if (!confirm('⚠️ EFFACER toutes les données de cette séance ?\n\nIRRÉVERSIBLE !')) {
-                return;
+        function toggleLock(sessionId) {
+            const sessionIndex = sessionId - 1;
+            const willLock = !state.sessions[sessionIndex].locked;
+            
+            if (willLock) {
+                if (!confirm('Verrouiller cette séance ?\n\nL\'élève ne pourra plus la modifier.')) return;
+            } else {
+                if (!confirm('Déverrouiller cette séance ?\n\nL\'élève pourra la modifier.')) return;
             }
+            
+            state.sessions[sessionIndex].locked = willLock;
+            saveDataToFirebase();
+            alert(willLock ? '🔒 Séance verrouillée !' : '🔓 Séance déverrouillée !');
+            render();
+        }
+
+
+        function effacerSeance(sessionId) {
+            if (!confirm('⚠️ EFFACER toutes les données de cette séance ?\n\nCette action est IRRÉVERSIBLE !')) return;
             
             const sessionIndex = sessionId - 1;
             const isTheme1 = state.profileData.theme === 'theme1';
             
             state.sessions[sessionIndex] = {
-                id: sessionId,
-                date: '',
-                locked: false,
-                observationsProf: '',
+                id: sessionId, date: '', locked: false, observationsProf: '',
                 series: Array(isTheme1 ? 8 : 4).fill(null).map((_, i) => ({
                     num: i + 1, fcFin: '', hauteur: '', saut: '', bras: '', lest: ''
                 })),
@@ -1298,7 +1189,7 @@
             };
             
             saveDataToFirebase();
-            alert('✅ Séance effacée !');
+            alert('🗑️ Séance effacée !');
             render();
         }
 
