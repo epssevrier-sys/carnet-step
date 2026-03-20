@@ -296,13 +296,18 @@
 
 
         // Vérifier si une séance est verrouillée
-                function isSessionLocked(session) {
-            // Verrouillage si locked=true (manuel)
-            if (session.locked) {
+                        function isSessionLocked(session) {
+            // Si manuellement déverrouillée par le prof
+            if (session.locked === false) {
+                return false;  // DÉVERROUILLÉE, point final
+            }
+            
+            // Si manuellement verrouillée
+            if (session.locked === true) {
                 return true;
             }
             
-            // OU si 24h après la date
+            // Sinon, vérifier la date (24h auto)
             if (session.date) {
                 const sessionDate = new Date(session.date);
                 const now = new Date();
@@ -570,6 +575,39 @@
                                 `FC cible : ≥ ${calcFCE()} bpm (85% FCR) | Zone : ${calcFCE()} - ${Math.round(state.profileData.fcRepos + (calcFCReserve() * 0.95))} bpm` : 
                                 `FC cible : ≥ ${calcFCE()} bpm (70% FCR) | Zone : ${calcFCE()} - ${calcFCEMax()} bpm`
                             }
+                        </p>
+                    </div>
+                    
+                    
+                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
+                        <p class="font-bold text-yellow-900 mb-2 text-sm">🎯 Objectifs de Fréquence Cardiaque</p>
+                        <p class="text-sm font-semibold text-red-700">
+                            FC cible : ${(() => {
+                                const age = parseInt(state.profileData.age) || 18;
+                                const fcRepos = parseInt(state.profileData.fcRepos) || 60;
+                                const fcMax = 220 - age;
+                                const fcReserve = fcMax - fcRepos;
+                                const pct = state.profileData.theme === 'theme1' ? 0.85 : 0.70;
+                                const fcMin = Math.round(fcRepos + (fcReserve * pct));
+                                return state.profileData.theme === 'theme1' 
+                                    ? '≥ ' + fcMin + ' bpm (85% FCR)'
+                                    : '≥ ' + fcMin + ' bpm (70% FCR)';
+                            })()}
+                        </p>
+                        <p class="text-xs text-gray-700 mt-1">
+                            Zone : ${(() => {
+                                const age = parseInt(state.profileData.age) || 18;
+                                const fcRepos = parseInt(state.profileData.fcRepos) || 60;
+                                const fcMax = 220 - age;
+                                const fcReserve = fcMax - fcRepos;
+                                const fcMin = state.profileData.theme === 'theme1' 
+                                    ? Math.round(fcRepos + (fcReserve * 0.85))
+                                    : Math.round(fcRepos + (fcReserve * 0.70));
+                                const fcMaxZone = state.profileData.theme === 'theme1'
+                                    ? Math.round(fcRepos + (fcReserve * 0.95))
+                                    : Math.round(fcRepos + (fcReserve * 0.85));
+                                return fcMin + ' - ' + fcMaxZone + ' bpm';
+                            })()}
                         </p>
                     </div>
                     
