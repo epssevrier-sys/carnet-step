@@ -179,7 +179,24 @@
         function saveDataToLocal() {
             localStorage.setItem(`step-profile-${state.studentId}`, JSON.stringify(state.profileData));
             localStorage.setItem(`step-sessions-${state.studentId}`, JSON.stringify(state.sessions));
-            localStorage.setItem('lastStudentId', state.studentId); // Mémoriser le dernier ID
+            localStorage.setItem('lastStudentId', state.studentId);
+                
+                // Ouverture auto sur la première séance vide pour l'élève
+                if (!isTeacher && state.profileData.nom) {
+                    let firstEmpty = 0;
+                    for (let i = 0; i < state.sessions.length; i++) {
+                        const s = state.sessions[i];
+                        const hasSomeData = s.date && s.series.some(ser => ser.fcFin);
+                        if (!hasSomeData) {
+                            firstEmpty = i + 1;
+                            break;
+                        }
+                    }
+                    if (firstEmpty === 0) {
+                        firstEmpty = state.sessions.length;
+                    }
+                    state.currentPage = firstEmpty;
+                } // Mémoriser le dernier ID
         }
 
         function loadDataFromLocal() {
