@@ -296,23 +296,23 @@
 
 
         // Vérifier si une séance est verrouillée
-        function isSessionLocked(session) {
-            // Si manuellement verrouillée (clic Enregistrer)
-            if (session.locked) return true;
+                function isSessionLocked(session) {
+            // Verrouillage si locked=true (manuel)
+            if (session.locked) {
+                return true;
+            }
             
-            // Si J+1 après la date
-            if (!session.date) return false;
+            // OU si 24h après la date
+            if (session.date) {
+                const sessionDate = new Date(session.date);
+                const now = new Date();
+                const diffHours = (now - sessionDate) / (1000 * 60 * 60);
+                if (diffHours >= 24) {
+                    return true;
+                }
+            }
             
-            const sessionDateObj = new Date(session.date);
-            const today = new Date();
-            
-            sessionDateObj.setHours(0, 0, 0, 0);
-            today.setHours(0, 0, 0, 0);
-            
-            const diffTime = today - sessionDateObj;
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            return diffDays >= 1;
+            return false;
         }
 
         function calcFCMax() {
