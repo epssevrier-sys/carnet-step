@@ -585,15 +585,6 @@
                         </div>
                     ` : ''}
                     
-                    <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
-                        <p class="font-bold text-yellow-900 mb-2">🎯 Objectifs FC pour ce thème</p>
-                        <p class="text-sm font-semibold text-red-700">
-                            ${state.profileData.theme === 'theme1' ? 
-                                `FC cible : ≥ ${calcFCE()} bpm (85% FCR) | Zone : ${calcFCE()} - ${Math.round(state.profileData.fcRepos + (calcFCReserve() * 0.95))} bpm` : 
-                                `FC cible : ≥ ${calcFCE()} bpm (70% FCR) | Zone : ${calcFCE()} - ${calcFCEMax()} bpm`
-                            }
-                        </p>
-                    </div>
                     
                     
                     <div class="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-3 mb-4">
