@@ -1354,11 +1354,16 @@
 
         function toggleLockProf(sessionId) {
             const idx = sessionId - 1;
-            const willLock = !state.sessions[idx].locked;
-            if (confirm(willLock ? 'Verrouiller ?' : 'Déverrouiller ?')) {
+            const currentLock = state.sessions[idx].locked;
+            // Si locked est undefined ou false, on verrouille
+            // Si locked est true, on déverrouille
+            const willLock = (currentLock !== true);
+            
+            if (confirm(willLock ? 'Verrouiller cette séance ?' : 'Déverrouiller cette séance ?')) {
                 state.sessions[idx].locked = willLock;
+                console.log('Toggle lock:', sessionId, 'locked=', willLock);
                 saveDataToFirebase();
-                alert(willLock ? '🔒 Verrouillée' : '🔓 Déverrouillée');
+                alert(willLock ? '🔒 Verrouillée !' : '🔓 Déverrouillée !');
                 render();
             }
         }
