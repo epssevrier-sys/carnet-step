@@ -546,6 +546,21 @@
             
             return `
                 <div class="bg-white p-6 rounded-lg shadow-lg mb-4">
+                    <!-- BOUTONS NAVIGATION HAUT -->
+                    <div class="flex justify-center gap-2 mb-4">
+                        <button onclick="previousPage()" ${state.currentPage === 0 ? 'disabled' : ''} 
+                                class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
+                            ← Précédent
+                        </button>
+                        <span class="px-4 py-2 bg-gray-100 rounded text-sm font-semibold">
+                            Page ${state.currentPage + 1}/9
+                        </span>
+                        <button onclick="nextPage()" ${state.currentPage === 8 ? 'disabled' : ''} 
+                                class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
+                            Suivant →
+                        </button>
+                    </div>
+                    
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold text-blue-900">SÉANCE #${s.id}</h2>
                         ${isTeacher ? `
@@ -1282,6 +1297,7 @@
 
 
         function saveTeacherModifications() {
+            console.log('💾 SAVE TEACHER appelé');
             if (!confirm('Sauvegarder les modifications apportées au carnet de cet élève ?\n\n⚠️ Utilisez cette fonction uniquement en cas de triche ou d\'erreur avérée.')) {
                 return;
             }
@@ -1353,8 +1369,10 @@
 
 
         function toggleLockProf(sessionId) {
+            console.log('🔧 TOGGLE LOCK appelé, sessionId:', sessionId);
             const idx = sessionId - 1;
             const currentLock = state.sessions[idx].locked;
+            console.log('État actuel locked:', currentLock);
             // Si locked est undefined ou false, on verrouille
             // Si locked est true, on déverrouille
             const willLock = (currentLock !== true);
