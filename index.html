@@ -228,25 +228,45 @@
             }
         }
 
-        function resetData() {
-            if (confirm('Réinitialiser toutes les données ?')) {
-                if (isFirebaseReady) {
-                    db.ref('students/' + state.studentId).remove()
-                        .then(() => {
-                            localStorage.removeItem(`step-profile-${state.studentId}`);
-                            localStorage.removeItem(`step-sessions-${state.studentId}`);
-                            resetStateData();
-                            alert('✅ Données supprimées');
-                        })
-                        .catch((error) => {
-                            console.error("Erreur suppression:", error);
-                        });
-                } else {
-                    localStorage.removeItem(`step-profile-${state.studentId}`);
-                    localStorage.removeItem(`step-sessions-${state.studentId}`);
-                    resetStateData();
-                    alert('✅ Données supprimées localement');
+                function resetData() {
+            if (!confirm('Réinitialiser cette séance ?\n\n⚠️ Toutes les données de cette séance seront effacées.')) {
+                return;
+            }
+            
+            const pageIndex = state.currentPage - 1; // -1 car page 0 = profil
+            if (pageIndex >= 0 && pageIndex < state.sessions.length) {
+                const sessionId = state.sessions[pageIndex].id;
+                const isTheme1 = state.profileData.theme === 'theme1';
+                
+                // Réinitialiser SEULEMENT cette séance
+                state.sessions[pageIndex] = {
+                    id: sessionId,
+                    date: '',
+                    locked: false,
+                    observationsProf: '',
+                    series: Array(isTheme1 ? 8 : 4).fill(null).map((_, i) => ({
+                        num: i + 1,
+                        fcFin: '',
+                        hauteur: '',
+                        saut: '',
+                        bras: '',
+                        lest: ''
+                    })),
+                    fcReussie: '',
+                    difficulteGlobale: '',
+                    fatigue: '',
+                    transpirationNiveau: '',
+                    bilan: ''
+                };
+                
+                console.log('🔄 Reset séance', sessionId);
+                
+                // Ne sauvegarder que si ce n'est pas le prof
+                if (!isTeacher) {
+                    saveDataToFirebase();
                 }
+                
+                render();
             }
         }
 
@@ -547,18 +567,26 @@
             return `
                 <div class="bg-white p-6 rounded-lg shadow-lg mb-4">
                     <!-- BOUTONS NAVIGATION HAUT -->
-                    <div class="flex justify-center gap-2 mb-4">
-                        <button onclick="previousPage()" ${state.currentPage === 0 ? 'disabled' : ''} 
-                                class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
-                            ← Précédent
-                        </button>
-                        <span class="px-4 py-2 bg-gray-100 rounded text-sm font-semibold">
-                            Page ${state.currentPage + 1}/9
-                        </span>
-                        <button onclick="nextPage()" ${state.currentPage === 8 ? 'disabled' : ''} 
-                                class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
-                            Suivant →
-                        </button>
+                    <div class="flex justify-between items-center mb-4">
+                        ${isTeacher ? `
+                            <button onclick="backToTeacherList()" class="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-semibold">
+                                ← Retour liste
+                            </button>
+                        ` : '<div></div>'}
+                        <div class="flex gap-2">
+                            <button onclick="previousPage()" ${state.currentPage === 0 ? 'disabled' : ''} 
+                                    class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
+                                ← Précédent
+                            </button>
+                            <span class="px-4 py-2 bg-gray-100 rounded text-sm font-semibold">
+                                Page ${state.currentPage + 1}/9
+                            </span>
+                            <button onclick="nextPage()" ${state.currentPage === 8 ? 'disabled' : ''} 
+                                    class="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300 text-sm font-semibold">
+                                Suivant →
+                            </button>
+                        </div>
+                        <div></div>
                     </div>
                     
                     <div class="flex justify-between items-center mb-4">
@@ -566,8 +594,9 @@
                         ${isTeacher ? `
                             <div class="flex gap-2">
                                 <button onclick="toggleLockProf(${s.id})" 
-                                        class="px-3 py-2 rounded font-bold text-white text-sm ${isLocked ? 'bg-red-600' : 'bg-green-600'}">
-                                    ${isLocked ? '🔒 Verrouillée' : '🔓 Déverrouillée'}
+                                        class="px-3 py-2 rounded font-bold text-white text-sm ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}"
+                                        title="Cliquez pour ${isLocked ? 'déverrouiller' : 'verrouiller'}">
+                                    ${isLocked ? '🔒 VERROUILLÉE' : '🔓 DÉVERROUILLÉE'}
                                 </button>
                                 <button onclick="effacerSeanceProf(${s.id})" 
                                         class="px-3 py-2 bg-orange-600 rounded font-bold text-white text-sm">
