@@ -1297,7 +1297,7 @@
 
 
         function saveTeacherModifications() {
-            console.log('💾 SAVE TEACHER appelé');
+            console.log('🔵 CLIC BOUTON SAUVEGARDER PROF');
             if (!confirm('Sauvegarder les modifications apportées au carnet de cet élève ?\n\n⚠️ Utilisez cette fonction uniquement en cas de triche ou d\'erreur avérée.')) {
                 return;
             }
@@ -1369,10 +1369,10 @@
 
 
         function toggleLockProf(sessionId) {
-            console.log('🔧 TOGGLE LOCK appelé, sessionId:', sessionId);
+            console.log('🔵 CLIC BOUTON TOGGLE', sessionId);
             const idx = sessionId - 1;
             const currentLock = state.sessions[idx].locked;
-            console.log('État actuel locked:', currentLock);
+            console.log('  État actuel:', currentLock);
             // Si locked est undefined ou false, on verrouille
             // Si locked est true, on déverrouille
             const willLock = (currentLock !== true);
